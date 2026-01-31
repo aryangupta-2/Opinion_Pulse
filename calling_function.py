@@ -6,11 +6,34 @@ from dataframe import get_df, train_and_save_bert_sentiment_model,predict_bert_s
 
 df = get_df()
 
-
 def clean_text(text):
     text = text.lower()
     text = re.sub(r"[^a-z\s]", "", text)
     return text
+
+import spacy
+from collections import Counter
+
+nlp = spacy.load("en_core_web_sm")
+
+USELESS_WORDS = {
+    "product", "item", "thing", "amazon", "buy", "purchase",
+    "quality", "price", "value"
+}
+
+def extract_noun_phrases(texts):
+    phrases = []
+
+    for doc in nlp.pipe(texts, disable=["ner", "parser"]):
+        for token in doc:
+            # focus on nouns only
+            if token.pos_ in {"NOUN", "PROPN"}:
+                phrase = token.lemma_.lower()
+                if phrase not in USELESS_WORDS and len(phrase) > 2:
+                    phrases.append(phrase)
+
+    return phrases
+
 
 
 def normalize_sentiment(x):
@@ -27,10 +50,10 @@ def overall_sentiment_score(df):
     df["sentiment_norm"] = df["bert_label"].apply(normalize_sentiment)
 
     return {
-        "overall_sentiment_score": round(df["sentiment_norm"].mean(), 3),
-        "positive_ratio": round((df["sentiment_norm"] == 1).mean(), 3),
-        "negative_ratio": round((df["sentiment_norm"] == -1).mean(), 3),
-        "total_reviews": len(df)
+        "overall_sentiment_score":float( round(df["sentiment_norm"].mean(), 3)),
+        "positive_ratio": float(round((df["sentiment_norm"] == 1).mean(), 3)),
+        "negative_ratio": float(round((df["sentiment_norm"] == -1).mean(), 3)),
+        "total_reviews": int(len(df))
     }
 
 
@@ -53,33 +76,26 @@ def sentiment_trend_over_time(df, freq="M"):
         .reset_index()
     )
 
+    trend = trend[trend["review_count"] > 0]
     return trend
 
-def top_pros(df, top_n=5):
-    positive_reviews = df[df["bert_label"].apply(normalize_sentiment) == 1]
 
-    text = " ".join(
-        positive_reviews["review_title"].fillna("") + " " +
-        positive_reviews["review_text"].fillna("")
-    )
+def top_pros(df, n=5):
 
-    words = clean_text(text).split()
-    common = Counter(words)
+    texts = df[df["sentiment_norm"] == 1]["review_text"].dropna().tolist()
 
-    return common.most_common(top_n)
+    features = extract_noun_phrases(texts)
 
-def top_cons(df, top_n=5):
-    negative_reviews = df[df["bert_label"].apply(normalize_sentiment) == -1]
+    return Counter(features).most_common(n)
 
-    text = " ".join(
-        negative_reviews["review_title"].fillna("") + " " +
-        negative_reviews["review_text"].fillna("")
-    )
+def top_cons(df, n=5):
 
-    words = clean_text(text).split()
-    common = Counter(words)
+    texts = df[df["sentiment_norm"] == -1]["review_text"].dropna().tolist()
 
-    return common.most_common(top_n)
+    features = extract_noun_phrases(texts)
+
+    return Counter(features).most_common(n)
+
 
 def sentiment_polarization_index(df):
     df = df.copy()
@@ -90,7 +106,7 @@ def sentiment_polarization_index(df):
 
     polarization = 1 - abs(pos - neg)
 
-    return round(polarization, 3)
+    return float(round(polarization, 3))
 
 
 def review_momentum(df, freq="M"):
@@ -109,19 +125,19 @@ def review_momentum(df, freq="M"):
     return counts
 
 def generate_review_insights(df):
-    pipe = train_and_save_bert_sentiment_model()
-    df = predict_bert_sentiment(df,pipe)
-    return {
-        "overall_sentiment": overall_sentiment_score(df),
-        "sentiment_trend": sentiment_trend_over_time(df),
-        "top_5_pros": top_pros(df),
-        "top_5_cons": top_cons(df),
-        "sentiment_polarization_index": sentiment_polarization_index(df),
-        "review_momentum": review_momentum(df)
-    }
+  
+    return (
+         overall_sentiment_score(df),
+         sentiment_trend_over_time(df, freq="ME"),
+         top_pros(df),
+         top_cons(df),
+         sentiment_polarization_index(df),
+         review_momentum(df, freq="ME")
+    )
 
-
-
+#   pipe = train_and_save_bert_sentiment_model()
+#     df = predict_bert_sentiment(df,pipe)
+df["sentiment_norm"] = df["bert_label"].apply(normalize_sentiment)
 insights = generate_review_insights(df)
 
-print(insights.head())
+print(insights)
