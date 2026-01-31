@@ -3,27 +3,28 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import InvalidSessionIdException, WebDriverException, TimeoutException
+from selenium.common.exceptions import TimeoutException, StaleElementReferenceException
 import re
 import time
 import csv
-import os
 
-# -------------------- FUNCTION --------------------
-def get_amazon_review_url(product_url):
+# -------------------- INPUT PRODUCT URL --------------------
+PRODUCT_URL = input("Enter Amazon product URL: ").strip()
+
+def get_asin(product_url):
     match = re.search(r"/dp/([A-Z0-9]{10})|/product/([A-Z0-9]{10})", product_url)
     if not match:
-        return None
-    asin = match.group(1) or match.group(2)
-    return f"https://www.amazon.in/product-reviews/{asin}"
+        raise ValueError("❌ Invalid Amazon product URL")
+    return match.group(1) or match.group(2)
 
-# -------------------- INPUT --------------------
-product_url = "https://www.amazon.in/Classmate-Origami-Notebooks-Unruled-Pages/dp/B09ZPHH2XZ/ref=sr_1_1_sspa?crid=S8SWJRRE12DM&dib=eyJ2IjoiMSJ9.X4cNmVqaV3ewyk1EZ-F7unr0fkzRdVI-sC2Fp7h8NozZcuRwMpvQw2kJhzKFcy1zZ42niQGjJVm7yyQnRmyoHhx-QHmrW8TzTCWZZOwi7J3mfxtX0VOmEz5nsevcnNnDb75xGEemc-v17LG91TWyyKNqD-j2n8Z53lXD3lbJDzHj3MfHr6iMVQItfxBynJpgrCAhqW6NebWLl9NKJMufw7kUPsqQd-bXVp9Nycuhc82lUVwxuiX-75FsztUcDkC317UvZEHb7u5xqDqCnl1bi6siorTtV7XqVqu-fyd-QJ0.GiWqEp_VxQVmsqMzpcMWdbSLEKPWh6hLuJRvqZKXlbU&dib_tag=se&keywords=classmate%2Bnotebook&nsdOptOutParam=true&qid=1769843861&sprefix=classmate%2Bnoteb%2Caps%2C410&sr=8-1-spons&aref=T9BIXSN8Yx&sp_csd=d2lkZ2V0TmFtZT1zcF9hdGY&th=1"
-review_url = get_amazon_review_url(product_url)
+ASIN = get_asin(PRODUCT_URL)
 
-# -------------------- CSV SETUP --------------------
-csv_file = "amazon_reviews.csv"
-file_exists = os.path.isfile(csv_file)
+# -------------------- REVIEW PAGE URL (PAGE 1) --------------------
+REVIEW_START_URL = (
+    f"https://www.amazon.in/product-reviews/{ASIN}/"
+    "ref=cm_cr_dp_d_show_all_btm"
+    "?ie=UTF8&reviewerType=all_reviews"
+)
 
 # -------------------- SELENIUM SETUP --------------------
 options = Options()
@@ -34,42 +35,29 @@ driver = webdriver.Chrome(options=options)
 wait = WebDriverWait(driver, 20)
 
 try:
-    # -------------------- LOGIN STEP --------------------
+    # -------------------- LOGIN --------------------
     driver.get("https://www.amazon.in")
-    print("👉 Please log in manually.")
+    print("👉 Please log in manually if required.")
     print("👉 DO NOT close the browser.")
 
-    login_timeout = time.time() + 300  # 5 minutes
     while True:
-        if time.time() > login_timeout:
-            raise TimeoutError("Login not completed in time.")
-
-        try:
-            if driver.find_elements(By.ID, "nav-link-accountList"):
-                print("✅ Login detected")
-                break
-        except (InvalidSessionIdException, WebDriverException):
-            print("❌ Browser closed. Restart script.")
-            driver.quit()
-            exit()
-
+        if driver.find_elements(By.ID, "nav-link-accountList"):
+            print("✅ Login detected")
+            break
         time.sleep(2)
 
-    # -------------------- OPEN CSV --------------------
-    with open(csv_file, "w", newline="", encoding="utf-8") as f:
+    # -------------------- OPEN REVIEW PAGE --------------------
+    driver.get(REVIEW_START_URL)
+
+    # -------------------- CSV FILE --------------------
+    with open("amazon_reviews.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
+        writer.writerow(["review_title", "review_text"])
 
-        # Write header once
-        if not file_exists:
-            writer.writerow(["page", "review_text", "rating"])
+        page_number = 1
 
-        # -------------------- ITERATE REVIEW PAGES --------------------
-        MAX_PAGES = 5  # change if needed
-
-        for page in range(1, MAX_PAGES + 1):
-            print(f"\n📄 Scraping review page {page}...")
-
-            driver.get(f"{review_url}?pageNumber={page}")
+        while True:
+            print(f"📄 Scraping page {page_number}")
 
             try:
                 reviews = wait.until(
@@ -77,31 +65,49 @@ try:
                         (By.CSS_SELECTOR, '[data-hook="review"]')
                     )
                 )
-                print(f"✅ Page {page}: {len(reviews)} reviews found")
-
             except TimeoutException:
-                print(f"⚠️ Page {page}: No reviews found (possibly last page)")
+                print("⚠️ No reviews found. Stopping.")
                 break
 
-            # -------------------- SAVE REVIEWS --------------------
+            # -------- SCRAPE CURRENT PAGE --------
             for review in reviews:
                 try:
+                    title = review.find_element(
+                        By.CSS_SELECTOR, '[data-hook="review-title"]'
+                    ).text.strip()
+
                     text = review.find_element(
                         By.CSS_SELECTOR, '[data-hook="review-body"]'
                     ).text.strip()
 
-                    rating = review.find_element(
-                        By.CSS_SELECTOR, '[data-hook="review-star-rating"]'
-                    ).text.strip()
-
-                    writer.writerow([page, text, rating])
+                    writer.writerow([title, text])
 
                 except Exception:
-                    continue  # skip broken reviews
+                    continue
 
-            time.sleep(2)  # polite delay
+            # -------- CLICK NEXT BUTTON --------
+            try:
+                next_li = driver.find_element(By.CSS_SELECTOR, "li.a-last")
+
+                # Stop if last page
+                if "a-disabled" in next_li.get_attribute("class"):
+                    print("✅ Last page reached.")
+                    break
+
+                next_btn = next_li.find_element(By.TAG_NAME, "a")
+                driver.execute_script("arguments[0].scrollIntoView(true);", next_btn)
+                time.sleep(1)
+                next_btn.click()
+
+                page_number += 1
+                time.sleep(2)
+
+            except (StaleElementReferenceException, TimeoutException):
+                print("⚠️ Pagination ended.")
+                break
 
 finally:
     driver.quit()
-    print("\n✅ Scraping completed. Data saved to amazon_reviews.csv")
+    print("\n✅ ALL REVIEWS SAVED TO amazon_reviews.csv")
+
 
