@@ -19,7 +19,7 @@ def get_asin(product_url):
 
 ASIN = get_asin(PRODUCT_URL)
 
-# -------------------- REVIEW PAGE URL (PAGE 1) --------------------
+# -------------------- REVIEW PAGE (PAGE 1) --------------------
 REVIEW_START_URL = (
     f"https://www.amazon.in/product-reviews/{ASIN}/"
     "ref=cm_cr_dp_d_show_all_btm"
@@ -52,7 +52,7 @@ try:
     # -------------------- CSV FILE --------------------
     with open("amazon_reviews.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["review_title", "review_text"])
+        writer.writerow(["review_title", "review_text", "review_date"])
 
         page_number = 1
 
@@ -80,7 +80,14 @@ try:
                         By.CSS_SELECTOR, '[data-hook="review-body"]'
                     ).text.strip()
 
-                    writer.writerow([title, text])
+                    raw_date = review.find_element(
+                        By.CSS_SELECTOR, '[data-hook="review-date"]'
+                    ).text.strip()
+
+                    # 🔹 CLEAN DATE
+                    date = raw_date.replace("Reviewed in India on ", "").strip()
+
+                    writer.writerow([title, text, date])
 
                 except Exception:
                     continue
@@ -89,7 +96,6 @@ try:
             try:
                 next_li = driver.find_element(By.CSS_SELECTOR, "li.a-last")
 
-                # Stop if last page
                 if "a-disabled" in next_li.get_attribute("class"):
                     print("✅ Last page reached.")
                     break
@@ -109,5 +115,6 @@ try:
 finally:
     driver.quit()
     print("\n✅ ALL REVIEWS SAVED TO amazon_reviews.csv")
+
 
 
