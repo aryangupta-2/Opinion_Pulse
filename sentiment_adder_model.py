@@ -155,3 +155,6 @@ def predict_bert_sentiment(
     ]
 
     return df
+
+pipe=train_and_save_bert_sentiment_model()
+df = predict_bert_sentiment(get_df(), pipe)
