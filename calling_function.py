@@ -6,6 +6,11 @@ from dataframe import get_df, train_and_save_bert_sentiment_model,predict_bert_s
 
 df = get_df()
 
+def clean_text(text):
+    text = text.lower()
+    text = re.sub(r"[^a-z\s]", "", text)
+    return text
+
 
 def normalize_sentiment(x):
     """
