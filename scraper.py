@@ -44,7 +44,7 @@ try:
         if driver.find_elements(By.ID, "nav-link-accountList"):
             print("✅ Login detected")
             break
-        time.sleep(2)
+        time.sleep(10)
 
     # -------------------- OPEN REVIEW PAGE --------------------
     driver.get(REVIEW_START_URL)
