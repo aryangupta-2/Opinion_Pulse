@@ -6,6 +6,7 @@ from dataframe import get_df, train_and_save_bert_sentiment_model,predict_bert_s
 
 df = get_df()
 
+
 def clean_text(text):
     text = text.lower()
     text = re.sub(r"[^a-z\s]", "", text)
@@ -23,7 +24,7 @@ def normalize_sentiment(x):
 
 def overall_sentiment_score(df):
     df = df.copy()
-    df["sentiment_norm"] = df["sentiment"].apply(normalize_sentiment)
+    df["sentiment_norm"] = df["bert_label"].apply(normalize_sentiment)
 
     return {
         "overall_sentiment_score": round(df["sentiment_norm"].mean(), 3),
@@ -39,7 +40,7 @@ def sentiment_trend_over_time(df, freq="M"):
     """
     df = df.copy()
     df["review_date"] = pd.to_datetime(df["review_date"])
-    df["sentiment_norm"] = df["sentiment"].apply(normalize_sentiment)
+    df["sentiment_norm"] = df["bert_label"].apply(normalize_sentiment)
 
     trend = (
         df
@@ -55,7 +56,7 @@ def sentiment_trend_over_time(df, freq="M"):
     return trend
 
 def top_pros(df, top_n=5):
-    positive_reviews = df[df["sentiment"].apply(normalize_sentiment) == 1]
+    positive_reviews = df[df["bert_label"].apply(normalize_sentiment) == 1]
 
     text = " ".join(
         positive_reviews["review_title"].fillna("") + " " +
@@ -68,7 +69,7 @@ def top_pros(df, top_n=5):
     return common.most_common(top_n)
 
 def top_cons(df, top_n=5):
-    negative_reviews = df[df["sentiment"].apply(normalize_sentiment) == -1]
+    negative_reviews = df[df["bert_label"].apply(normalize_sentiment) == -1]
 
     text = " ".join(
         negative_reviews["review_title"].fillna("") + " " +
@@ -82,7 +83,7 @@ def top_cons(df, top_n=5):
 
 def sentiment_polarization_index(df):
     df = df.copy()
-    df["sentiment_norm"] = df["sentiment"].apply(normalize_sentiment)
+    df["sentiment_norm"] = df["bert_label"].apply(normalize_sentiment)
 
     pos = (df["sentiment_norm"] == 1).mean()
     neg = (df["sentiment_norm"] == -1).mean()
