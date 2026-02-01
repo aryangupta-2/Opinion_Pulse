@@ -35,8 +35,8 @@ def train_and_save_bert_sentiment_model():
 
  
 
-        bert_train = train_df.sample(20, random_state=42)
-        bert_val   = test_df.sample(20, random_state=42)
+        bert_train = train_df.sample(15000, random_state=42)
+        bert_val   = test_df.sample(15000, random_state=42)
 
 
         tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
