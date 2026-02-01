@@ -38,12 +38,6 @@ def clean_review(text):
 
 
 
-df["clean_review_title"] = df["review_title"].apply(clean_review)
-df["clean_review_text"] = df["review_text"].apply(clean_review)
-
-
-
-
 
 
 
@@ -54,6 +48,25 @@ def get_df():
     if _df is None:
         _df = pd.read_csv("amazon_reviews.csv")
     return _df
+
+from transformers import pipeline
+import os
+
+MODEL_PATH = "sentiment-bert"
+
+def load_trained_sentiment_model():
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(
+            "Trained model not found. Run train_model.py once."
+        )
+
+    return pipeline(
+        "sentiment-analysis",
+        model=MODEL_PATH,
+        tokenizer=MODEL_PATH,
+        device=-1  
+    )
+
 
 
 def train_and_save_bert_sentiment_model():
@@ -189,6 +202,8 @@ def predict_bert_sentiment(
 
     return df
 
-pipe=train_and_save_bert_sentiment_model()
+
+pipe = load_trained_sentiment_model()
+
 df = predict_bert_sentiment(get_df(), pipe)
 
