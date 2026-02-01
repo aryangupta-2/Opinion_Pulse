@@ -1,9 +1,6 @@
-
-
-
-
-
 import pandas as pd
+from transformers import pipeline
+import os
 
 
 def train_and_save_bert_sentiment_model():
@@ -179,9 +176,7 @@ def preprocessing_training():
         ]
 
         return df
-    from transformers import pipeline
-    import os
-
+    
     MODEL_PATH = "sentiment-bert"
 
     def load_trained_sentiment_model():
