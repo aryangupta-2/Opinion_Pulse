@@ -26,7 +26,6 @@ def extract_noun_phrases(texts):
 
     for doc in nlp.pipe(texts, disable=["ner", "parser"]):
         for token in doc:
-            # focus on nouns only
             if token.pos_ in {"NOUN", "PROPN"}:
                 phrase = token.lemma_.lower()
                 if phrase not in USELESS_WORDS and len(phrase) > 2:
@@ -135,8 +134,6 @@ def generate_review_insights(df):
          review_momentum(df, freq="ME")
     )
 
-#   pipe = train_and_save_bert_sentiment_model()
-#     df = predict_bert_sentiment(df,pipe)
 df["sentiment_norm"] = df["bert_label"].apply(normalize_sentiment)
 insights = generate_review_insights(df)
 
