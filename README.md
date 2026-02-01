@@ -133,7 +133,7 @@ Generates high-level business intelligence including:
 
 ### 1️⃣ Clone the Repository
 ```bash
-git clone <repo-url>
+git clone https://github.com/aryangupta-2/Opinion_Pulse
 
 python train.py
 
