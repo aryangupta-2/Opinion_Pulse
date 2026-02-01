@@ -136,21 +136,6 @@ def insight(df):
         return float(round(polarization, 3))
 
 
-    def review_momentum(df, freq="M"):
-        df = df.copy()
-        df["review_date"] = pd.to_datetime(df["review_date"])
-
-        counts = (
-            df
-            .groupby(pd.Grouper(key="review_date", freq=freq))
-            .size()
-            .reset_index(name="review_count")
-        )
-
-        counts["growth_rate"] = counts["review_count"].pct_change()
-
-        return counts
-
     def generate_review_insights(df):
     
         return (
@@ -159,7 +144,6 @@ def insight(df):
             top_pros(df),
             top_cons(df),
             sentiment_polarization_index(df),
-            review_momentum(df, freq="ME")
         )
 
     df["sentiment_norm"] = df["bert_label"].apply(normalize_sentiment)
