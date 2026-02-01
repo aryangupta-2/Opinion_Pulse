@@ -126,3 +126,12 @@ Generates high-level business intelligence including:
 
 ##  System Architecture
 <img width="286" height="512" alt="image" src="https://github.com/user-attachments/assets/dd488732-72f8-4ab6-9083-0b6b87416b4c" />
+
+---
+
+## Installation Guide
+
+### 1️⃣ Clone the Repository
+```bash
+git clone <repo-url>
+cd project-nlp
