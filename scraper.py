@@ -22,6 +22,7 @@ REVIEW_START_URL = (
     f"https://www.amazon.in/product-reviews/{ASIN}/"
     "ref=cm_cr_dp_d_show_all_btm"
     "?ie=UTF8&reviewerType=all_reviews"
+    "&sortBy=recent&pageNumber=1"
 )
 
 
