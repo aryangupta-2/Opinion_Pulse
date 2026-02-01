@@ -3,6 +3,9 @@
 
 ##  Project Description
 
+Customer reviews contain valuable feedback, but are unstructured and noisy.
+Manually analyzing thousands of reviews is infeasible.
+
 This project implements an **end-to-end AI-powered review intelligence pipeline** that transforms raw Amazon product reviews into **business-ready sentiment and trend insights** using web scraping, NLP, and deep learning.
 
 The system automatically:
