@@ -128,6 +128,9 @@ Generates high-level business intelligence including:
 <img width="286" height="512" alt="image" src="https://github.com/user-attachments/assets/dd488732-72f8-4ab6-9083-0b6b87416b4c" />
 
 ---
+## Demo 
+
+https://drive.google.com/drive/u/0/folders/1UesQQiGNEZcZFN93e-wFEZBELeLRWX3Y
 
 ## Installation Guide
 
@@ -138,3 +141,5 @@ git clone https://github.com/aryangupta-2/Opinion_Pulse
 python train.py
 
 streamlit run ui.py
+
+
