@@ -2,36 +2,66 @@ import pandas as pd
 import numpy as np
 from collections import Counter
 import re
-from dataframe import get_df, train_and_save_bert_sentiment_model,predict_bert_sentiment
+from dataframe import get_df,load_trained_sentiment_model,predict_bert_sentiment,clean_review
 
 df = get_df()
+
+
+
+df["clean_review_title"] = df["review_title"].apply(clean_review)
+df["clean_review_text"] = df["review_text"].apply(clean_review)
 
 def clean_text(text):
     text = text.lower()
     text = re.sub(r"[^a-z\s]", "", text)
     return text
 
+
+import re
 import spacy
 from collections import Counter
+from rapidfuzz import fuzz
 
 nlp = spacy.load("en_core_web_sm")
 
 USELESS_WORDS = {
     "product", "item", "thing", "amazon", "buy", "purchase",
-    "quality", "price", "value"
+    "price", "value"
 }
 
 def extract_noun_phrases(texts):
     phrases = []
 
-    for doc in nlp.pipe(texts, disable=["ner", "parser"]):
-        for token in doc:
-            if token.pos_ in {"NOUN", "PROPN"}:
-                phrase = token.lemma_.lower()
-                if phrase not in USELESS_WORDS and len(phrase) > 2:
-                    phrases.append(phrase)
+    for doc in nlp.pipe(texts):
+        for chunk in doc.noun_chunks:
+            phrase = chunk.text.lower().strip()
+
+            phrase = re.sub(r"[^a-z\s]", "", phrase)
+            phrase = re.sub(r"\s+", " ", phrase)
+
+            if (
+                len(phrase.split()) >= 2 and
+                phrase not in USELESS_WORDS
+            ):
+                phrases.append(phrase)
 
     return phrases
+
+def merge_similar_phrases(phrases, similarity_threshold=85):
+    merged = {}
+
+    for phrase in phrases:
+        found = False
+        for key in merged:
+            if fuzz.ratio(phrase, key) >= similarity_threshold:
+                merged[key] += 1
+                found = True
+                break
+        if not found:
+            merged[phrase] = 1
+
+    return merged
+
 
 
 
@@ -78,22 +108,25 @@ def sentiment_trend_over_time(df, freq="M"):
     trend = trend[trend["review_count"] > 0]
     return trend
 
-
 def top_pros(df, n=5):
+    texts = df[df["sentiment_norm"] == 1]["clean_review_text"].dropna().tolist()
 
-    texts = df[df["sentiment_norm"] == 1]["review_text"].dropna().tolist()
+    phrases = extract_noun_phrases(texts)
 
-    features = extract_noun_phrases(texts)
+    merged_phrases = merge_similar_phrases(phrases)
 
-    return Counter(features).most_common(n)
+    return Counter(merged_phrases).most_common(n)
+
 
 def top_cons(df, n=5):
+    texts = df[df["sentiment_norm"] == -1]["clean_review_text"].dropna().tolist()
 
-    texts = df[df["sentiment_norm"] == -1]["review_text"].dropna().tolist()
+    phrases = extract_noun_phrases(texts)
 
-    features = extract_noun_phrases(texts)
+    merged_phrases = merge_similar_phrases(phrases)
 
-    return Counter(features).most_common(n)
+    return Counter(merged_phrases).most_common(n)
+
 
 
 def sentiment_polarization_index(df):
