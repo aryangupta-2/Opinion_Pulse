@@ -134,4 +134,7 @@ Generates high-level business intelligence including:
 ### 1️⃣ Clone the Repository
 ```bash
 git clone <repo-url>
-cd project-nlp
+
+python train.py
+
+streamlit run ui.py
