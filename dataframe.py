@@ -130,31 +130,22 @@ def preprocessing_training():
         if not isinstance(text, str):
             return ""
 
-        # 1️⃣ Remove HTML
         text = BeautifulSoup(text, "html.parser").get_text()
 
-        # 2️⃣ Lowercase
         text = text.lower()
 
-        # 3️⃣ Remove URLs
         text = re.sub(r"http\S+|www\S+", "", text)
 
-        # 4️⃣ Remove emojis
         text = emoji.replace_emoji(text, replace="")
 
-        # 5️⃣ Remove punctuation
         text = text.translate(str.maketrans("", "", string.punctuation))
 
-        # 6️⃣ Tokenization
         tokens = text.split()
 
-        # 7️⃣ Remove stopwords
         tokens = [t for t in tokens if t not in stop_words]
 
-        # 8️⃣ Lemmatization
         tokens = [lemmatizer.lemmatize(t) for t in tokens]
 
-        # 9️⃣ Join tokens back
         return " ".join(tokens)
     df["review_title"] = df["review_title"].apply(clean_review)
     df["review_text"] = df["review_text"].apply(clean_review)
@@ -163,21 +154,13 @@ def preprocessing_training():
 
 
 
-    
-
-
     def predict_bert_sentiment(
         df,
         sentiment_pipe,
         batch_size=32,
         max_length=256
     ):
-        """
-        Appends a bert_label column to df:
-        1 -> positive
-        0 -> negative
-        """
-
+        
         df["text"] = (
             "TITLE: " + df["review_title"].fillna("") +
             " [SEP] REVIEW: " + df["review_text"].fillna("")
